@@ -2,11 +2,6 @@ FROM php:7.4.9
 
 WORKDIR /php
 
-RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" && \
-    php -r "if (hash_file('sha384', 'composer-setup.php') ==='795f976fe0ebd8b75f26a6dd68f78fd3453ce79f32ecb33e7fd087d39bfeb978342fb73ac986cd4f54edd0dc902601dc') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;" && \
-    php composer-setup.php --install-dir=/usr/local/bin --filename=composer && \
-    php -r "unlink('composer-setup.php');"
-
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         libzip-dev \
@@ -16,6 +11,11 @@ RUN apt-get update && \
         && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+RUN wget https://getcomposer.org/download/2.0.8/composer.phar -O /usr/local/bin/composer && \
+    php -r "if (hash_file('sha256', '/usr/local/bin/composer') ==='2021f0d52b446e0efe3c548cc058ab5671fa38cdbcf814e7911c7e9d71d61538') { echo 'Download File is verified'; } else { echo 'Download is failed'; unlink('/usr/local/bin/composer'); } echo PHP_EOL;" && \
+    chmod +x /usr/local/bin/composer && \
+    /usr/local/bin/composer self-update
 
 RUN docker-php-ext-configure zip && \
     docker-php-ext-install zip && \
