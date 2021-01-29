@@ -19,12 +19,12 @@ services:
     mem_limit: '4096m' # VM等でリソースをきっちり制限して動かすつもりがないので適当に
     build: ../php # ここでphpディレクトリのDockerfileを利用してrun
     command: php-fpm
-#    entrypoint:
-#      - dockerize # 普段はスクリプトで起動を待っている処理。世間ではdockerizeコマンドを実行するらしい。
-#      - -timeout
-#      - 60s
-#      - -wait
-#      - tcp://mysql:3306
+    entrypoint:
+      - dockerize # 普段はスクリプトで起動を待っている処理。世間ではdockerizeコマンドを実行するらしい。
+      - -timeout
+      - 60s
+      - -wait
+      - tcp://mysql:3306
     volumes:
       - ../mysql/db:/var/www/mysql/db
       - ../fixture:/var/www/fixture
@@ -52,16 +52,10 @@ services:
         - ../nginx/isuumo.php.conf:/etc/nginx/conf.d/default.conf
         - ../nginx/out:/var/www/data
     ports:
-      - "8080:80"
-#    entrypoint:
-#      - dockerize
-#      - -timeout
-#      - 60s
-#      - -wait
-##      - http://api-server:9000/api/estate/search/condition
-#      - http://127.0.0.1/api/estate/search/condition
+      - "1323:1323"
+    entrypoint: []
     environment:
       API_SERVER: api-server
-#    depends_on:
-#      - frontend
+    depends_on:
+      - frontend
     command: nginx -g 'daemon off;'
