@@ -174,7 +174,7 @@ return function (App $app) {
         $searchQuery = 'SELECT * FROM chair WHERE ';
         $countQuery = 'SELECT COUNT(*) FROM chair WHERE ';
         $searchCondition = implode(' AND ', $conditions);
-        $limitOffset = ' ORDER BY popularity DESC, id ASC LIMIT :limit OFFSET :offset';
+        $limitOffset = ' ORDER BY minus_popularity ASC, id ASC LIMIT :limit OFFSET :offset';
 
         $stmt = $this->get(PDO::class)->prepare($countQuery . $searchCondition);
         foreach ($params as $key => $bind) {
@@ -326,32 +326,35 @@ return function (App $app) {
         $pdo = $this->get(PDO::class);
 
         try {
-            $pdo->beginTransaction();
-
-            foreach ($records as $record) {
-                $query = 'INSERT INTO chair VALUES(:id, :name, :description, :thumbnail, :price, :height, :width, :depth, :color, :features, :kind, :popularity, :stock)';
-                $stmt = $pdo->prepare($query);
-                $stmt->execute([
-                    ':id' => (int)trim($record[0] ?? null),
-                    ':name' => (string)trim($record[1] ?? null),
-                    ':description' => (string)trim($record[2] ?? null),
-                    ':thumbnail' => (string)trim($record[3] ?? null),
-                    ':price' => (int)trim($record[4] ?? null),
-                    ':height' => (int)trim($record[5] ?? null),
-                    ':width' => (int)trim($record[6]) ?? null,
-                    ':depth' => (int)trim($record[7] ?? null),
-                    ':color' => (string)trim($record[8] ?? null),
-                    ':features' => (string)trim($record[9] ?? null),
-                    ':kind' => (string)trim($record[10] ?? null),
-                    ':popularity' => (int)trim($record[11] ?? null),
-                    ':stock' => (int)trim($record[12] ?? null),
-                ]);
-            }
-
-            $pdo->commit();
+          $inserts = [];
+          $placeHolders = [];
+          foreach ($records as $record) {
+            $inserts = array_merge($inserts, [
+              (int)trim($record[0] ?? null), //id
+              (string)trim($record[1] ?? null), //name
+              (string)trim($record[2] ?? null), //description
+              (string)trim($record[3] ?? null), // thumbnail
+              (int)trim($record[4] ?? null), //price
+              (int)trim($record[5] ?? null), //height
+              (int)trim($record[6]) ?? null, //width
+              (int)trim($record[7] ?? null), //depth
+              (string)trim($record[8] ?? null), //color
+              (string)trim($record[9] ?? null), //features
+              (string)trim($record[10] ?? null), //kind
+              (int)trim($record[11] ?? null), //popularity
+              (int)trim($record[12] ?? null), //stock
+            ]);
+            $placeHolders[] = '(?,?,?,?,?,?,?,?,?,?,?,?,?)';
+          }
+          $query = 'INSERT INTO chair (id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES ';
+          $query .= implode(',', $placeHolders);
+          $pdo->beginTransaction();
+          $stmt = $pdo->prepare($query);
+          $stmt->execute($inserts);
+          $pdo->commit();
         } catch (PDOException $e) {
             $pdo->rollBack();
-            $this->get('logger')->error(sprintf('failed to insert chair: %s', $e->getMessage()));
+            $this->get('logger')->error(sprintf('[%s]failed to insert chair: %s', __LINE__, $e->getMessage()));
             return $response->withStatus(StatusCodeInterface::STATUS_INTERNAL_SERVER_ERROR);
         }
 
@@ -376,31 +379,36 @@ return function (App $app) {
         $pdo = $this->get(PDO::class);
 
         try {
-            $pdo->beginTransaction();
+          $inserts = [];
+          $placeHolders = [];
+
 
             foreach ($records as $record) {
-                $query = 'INSERT INTO estate VALUES(:id, :name, :description, :thumbnail, :address, :latitude, :longitude, :rent, :door_height, :door_width, :features, :popularity)';
-                $stmt = $pdo->prepare($query);
-                $stmt->execute([
-                    'id' => (int)trim($record[0] ?? null),
-                    'name' => trim($record[1] ?? null),
-                    'description' => trim($record[2] ?? null),
-                    'thumbnail' => trim($record[3] ?? null),
-                    'address' => trim($record[4] ?? null),
-                    'latitude' => (float)trim($record[5] ?? null),
-                    'longitude' => (float)trim($record[6] ?? null),
-                    'rent' => (int)trim($record[7] ?? null),
-                    'door_height' => (int)trim($record[8] ?? null),
-                    'door_width' => (int)trim($record[9] ?? null),
-                    'features' => trim($record[10] ?? null),
-                    'popularity' => (int)trim($record[11] ?? null),
-                ]);
+              $inserts = array_merge($inserts, [
+                (int)trim($record[0] ?? null), //id
+                trim($record[1] ?? null), //name
+                trim($record[2] ?? null), //description
+                trim($record[3] ?? null), //thumbnail
+                trim($record[4] ?? null), //address
+                (float)trim($record[5] ?? null), //latitude
+                (float)trim($record[6] ?? null), //longitude
+                (int)trim($record[7] ?? null), //rent
+                (int)trim($record[8] ?? null), //door_height
+                (int)trim($record[9] ?? null), //door_width
+                trim($record[10] ?? null), //features
+                (int)trim($record[11] ?? null), //popularity
+              ]);
+              $placeHolders[] = '(?,?,?,?,?,?,?,?,?,?,?,?)';
             }
-
-            $pdo->commit();
+          $query = 'INSERT INTO estate (id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES';
+          $query .= implode(',', $placeHolders);
+          $pdo->beginTransaction();
+          $stmt = $pdo->prepare($query);
+          $stmt->execute($inserts);
+          $pdo->commit();
         } catch (PDOException $e) {
             $pdo->rollBack();
-            $this->get('logger')->error(sprintf('failed to insert estate: %s', $e->getMessage()));
+            $this->get('logger')->error(sprintf('[%s]failed to insert estate: %s', __LINE__, $e->getMessage()));
             return $response->withStatus(StatusCodeInterface::STATUS_INTERNAL_SERVER_ERROR);
         }
 
@@ -485,7 +493,7 @@ return function (App $app) {
         $searchQuery = 'SELECT * FROM estate WHERE ';
         $countQuery = 'SELECT COUNT(*) FROM estate WHERE ';
         $searchCondition = implode(' AND ', $conditions);
-        $limitOffset = ' ORDER BY popularity DESC, id ASC LIMIT :limit OFFSET :offset';
+        $limitOffset = ' ORDER BY minus_popularity ASC, id ASC LIMIT :limit OFFSET :offset';
 
         $stmt = $this->get(PDO::class)->prepare($countQuery . $searchCondition);
         foreach ($params as $key => $bind) {
@@ -578,7 +586,7 @@ return function (App $app) {
 
         $boundingBox = BoundingBox::createFromCordinates($coordinates);
 
-        $query = 'SELECT * FROM estate WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ORDER BY popularity DESC, id ASC';
+        $query = 'SELECT * FROM estate WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ORDER BY minus_popularity ASC, id ASC';
         $stmt = $this->get(PDO::class)->prepare($query);
         $stmt->execute([
             $boundingBox->bottomRightCorner->latitude,
@@ -640,7 +648,7 @@ return function (App $app) {
             return $response->withStatus(StatusCodeInterface::STATUS_BAD_REQUEST);
         }
 
-        $query = 'SELECT * FROM estate WHERE (door_width >= :w AND door_height >= :h) OR (door_width >= :w AND door_height >= :d) OR (door_width >= :h AND door_height >= :w) OR (door_width >= :h AND door_height >= :d) OR (door_width >= :d AND door_height >= :w) OR (door_width >= :d AND door_height >= :h) ORDER BY popularity DESC, id ASC LIMIT :limit';
+        $query = 'SELECT * FROM estate WHERE (door_width >= :w AND door_height >= :h) OR (door_width >= :w AND door_height >= :d) OR (door_width >= :h AND door_height >= :w) OR (door_width >= :h AND door_height >= :d) OR (door_width >= :d AND door_height >= :w) OR (door_width >= :d AND door_height >= :h) ORDER BY minus_popularity ASC, id ASC LIMIT :limit';
         $stmt = $this->get(PDO::class)->prepare($query);
         $stmt->bindValue(':w', $chair->getWidth(), PDO::PARAM_INT);
         $stmt->bindValue(':h', $chair->getHeight(), PDO::PARAM_INT);
