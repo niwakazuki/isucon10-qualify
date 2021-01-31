@@ -13,6 +13,7 @@ CREATE TABLE isuumo.estate
     address     VARCHAR(128)        NOT NULL,
     latitude    DOUBLE PRECISION    NOT NULL,
     longitude   DOUBLE PRECISION    NOT NULL,
+    point point GENERATED ALWAYS AS (st_geometryfromtext(concat('POINT (',`latitude`,' ',`longitude`, ')'))) STORED NOT NULL ,
     rent        INTEGER             NOT NULL,
     door_height INTEGER             NOT NULL,
     door_width  INTEGER             NOT NULL,
@@ -23,6 +24,7 @@ CREATE TABLE isuumo.estate
     KEY `krent` (`rent`) USING BTREE,
     KEY `kdoor_width` (`door_width`) USING BTREE,
     KEY `kdoor_height` (`door_height`) USING BTREE,
+    SPATIAL KEY `point` (`point`),
     KEY `kminus_popularity` (`minus_popularity`) USING BTREE
 );
 
