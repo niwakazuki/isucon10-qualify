@@ -49,12 +49,5 @@ CREATE TABLE isuumo.chair
     KEY `kwidth` (`width`) USING BTREE,
     KEY `kdepth` (`depth`) USING BTREE,
     KEY `kpopularity` (`popularity`) USING BTREE,
-    KEY `kminus_popularity` (`minus_popularity`) USING BTREE,
-    KEY `kstock` (`stock`) USING BTREE,
-    KEY `kkind_with_stock` (`kind`,`stock`) USING BTREE,
-    KEY `kcolor_with_stock` (`color`,`stock`) USING BTREE,
-    KEY `kheight_with_stock` (`height`,`stock`) USING BTREE,
-    KEY `kprice_with_stock` (`price`,`stock`) USING BTREE,
-    KEY `kwidth_with_stock` (`width`,`stock`) USING BTREE,
-    KEY `kdepth_with_stock` (`depth`,`stock`) USING BTREE
+    KEY `kminus_popularity` (`minus_popularity`) USING BTREE
 );

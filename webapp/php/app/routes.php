@@ -160,8 +160,6 @@ return function (App $app) {
             return $response->withStatus(StatusCodeInterface::STATUS_BAD_REQUEST);
         }
 
-        $conditions[] = 'stock > 0';
-
         if (is_null($page = $request->getQueryParams()['page'] ?? null)) {
             $this->get('logger')->info(sprintf('Invalid format page parameter: %s', $page));
             return $response->withStatus(StatusCodeInterface::STATUS_BAD_REQUEST);
@@ -209,7 +207,7 @@ return function (App $app) {
     });
 
     $app->get('/api/chair/low_priced', function(Request $request, Response $response) {
-        $query = 'SELECT * FROM chair WHERE stock > 0 ORDER BY price ASC, id ASC LIMIT :limit';
+        $query = 'SELECT * FROM chair ORDER BY price ASC, id ASC LIMIT :limit';
         $stmt = $this->get(PDO::class)->prepare($query);
         $stmt->bindValue(':limit', NUM_LIMIT, PDO::PARAM_INT);
         $stmt->execute();
@@ -263,18 +261,32 @@ return function (App $app) {
                 return $response->withStatus(StatusCodeInterface::STATUS_NOT_FOUND);
             }
 
-            $stmt = $pdo->prepare('UPDATE chair SET stock = stock - 1 WHERE id = :id');
-            $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-            if (!$stmt->execute()) {
+            // 見る限り在庫なしのものは参照されないのでレコードごと消してしまう。
+            if((int)$chair->stock == 1){
+              $stmt = $pdo->prepare('DELETE FROM chair WHERE id = :id');
+              $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+              if (!$stmt->execute()) {
+                $pdo->rollBack();
+                $this->get('logger')->error('chair delete failed');
+                return $response->withStatus(StatusCodeInterface::STATUS_INTERNAL_SERVER_ERROR);
+              }
+              $pdo->commit();
+            } else {
+              $stmt = $pdo->prepare('UPDATE chair SET stock = stock - 1 WHERE id = :id');
+              $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+              if (!$stmt->execute()) {
                 $pdo->rollBack();
                 $this->get('logger')->error('chair stock update failed');
                 return $response->withStatus(StatusCodeInterface::STATUS_INTERNAL_SERVER_ERROR);
+              }
+
+              $pdo->commit();
             }
 
-            $pdo->commit();
         } catch (PDOException $e) {
             $pdo->rollBack();
             $this->get('logger')->error(sprintf('DB Execution Error: on getting a chair by id : %s', $id));
+            $this->get('logger')->error($e->getMessage());
             return $response->withStatus(StatusCodeInterface::STATUS_INTERNAL_SERVER_ERROR);
         }
 
