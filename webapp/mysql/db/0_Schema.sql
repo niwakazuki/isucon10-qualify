@@ -2,7 +2,9 @@ DROP DATABASE IF EXISTS isuumo;
 CREATE DATABASE isuumo;
 
 DROP TABLE IF EXISTS isuumo.estate;
+DROP TABLE IF EXISTS isuumo.estate_feature;
 DROP TABLE IF EXISTS isuumo.chair;
+DROP TABLE IF EXISTS isuumo.chair_feature;
 
 CREATE TABLE isuumo.estate
 (
@@ -26,6 +28,14 @@ CREATE TABLE isuumo.estate
     KEY `idx_door_height` (`door_height`) USING BTREE,
     SPATIAL KEY `idx_point` (`point`),
     KEY `idx_minuspopularity_id` (`minus_popularity`,`id`) USING BTREE
+);
+
+CREATE TABLE isuumo.`estate_feature` (
+    `seq` int(11) NOT NULL AUTO_INCREMENT,
+    `feature` varchar(128) NOT NULL,
+    `id` int(11) NOT NULL,
+    PRIMARY KEY (`seq`),
+    KEY `idx_feature` (`feature`) USING BTREE
 );
 
 CREATE TABLE isuumo.chair
@@ -52,4 +62,12 @@ CREATE TABLE isuumo.chair
     KEY `idx_color` (`color`) USING BTREE,
     KEY `idx_kind` (`kind`) USING BTREE,
     KEY `idx_minuspopularity_id` (`minus_popularity`,`id`) USING BTREE
+);
+
+CREATE TABLE isuumo.`chair_feature` (
+    `seq` int(11) NOT NULL AUTO_INCREMENT,
+    `feature` varchar(128) NOT NULL,
+    `id` int(11) NOT NULL,
+    PRIMARY KEY (`seq`),
+    KEY `idx_feature` (`feature`) USING BTREE
 );

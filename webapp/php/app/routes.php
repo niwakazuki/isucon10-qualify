@@ -65,7 +65,29 @@ return function (App $app) {
             }
         }
 
-        $response->getBody()->write(json_encode([
+        foreach(['estate', 'chair'] as $type){
+            // estate_featureテーブル作成
+            $pdo = $this->get(PDO::class);
+            $stmt = $pdo->prepare(sprintf('select id, features from isuumo.%s where features is not null', $type));
+            $stmt->execute();
+            $params = [];
+            $placeholders = [];
+            while($line = $stmt->fetch()) {
+              $featuresAry = explode(',', $line['features'] ?? '');
+              foreach($featuresAry as $feature){
+                if($feature){
+                  $params[] = $line['id'];
+                  $params[] = $feature;
+                  $placeholders[] = '(?, ?)';
+                }
+              }
+            }
+            $query = sprintf('insert into isuumo.%s_feature (id, feature) values %s', $type, implode(',', $placeholders));
+            $stmt = $pdo->prepare($query);
+            $stmt->execute($params);
+        }
+
+      $response->getBody()->write(json_encode([
             'language' => 'php',
         ]));
 
@@ -340,9 +362,13 @@ return function (App $app) {
         try {
           $inserts = [];
           $placeHolders = [];
+          $featureParams = [];
+          $featurePlaceHolders = [];
           foreach ($records as $record) {
+            $id = (int)trim($record[0] ?? null);
+            $features = (string)trim($record[9] ?? null);
             $inserts = array_merge($inserts, [
-              (int)trim($record[0] ?? null), //id
+              $id, //id
               (string)trim($record[1] ?? null), //name
               (string)trim($record[2] ?? null), //description
               (string)trim($record[3] ?? null), // thumbnail
@@ -351,18 +377,34 @@ return function (App $app) {
               (int)trim($record[6]) ?? null, //width
               (int)trim($record[7] ?? null), //depth
               (string)trim($record[8] ?? null), //color
-              (string)trim($record[9] ?? null), //features
+              $features, //features
               (string)trim($record[10] ?? null), //kind
               (int)trim($record[11] ?? null), //popularity
               (int)trim($record[12] ?? null), //stock
             ]);
             $placeHolders[] = '(?,?,?,?,?,?,?,?,?,?,?,?,?)';
+            if($id && $features){
+              $featuresAry = explode(',', $features);
+              foreach($featuresAry as $feature){
+                if($feature){
+                  $featureParams[] = $id;
+                  $featureParams[] = $feature;
+                  $featurePlaceHolders[] = '(?, ?)';
+                }
+              }
+            }
           }
-          $query = 'INSERT INTO chair (id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES ';
-          $query .= implode(',', $placeHolders);
+          $query = sprintf(
+            'INSERT INTO chair (id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES %s',
+            implode(',', $placeHolders));
           $pdo->beginTransaction();
           $stmt = $pdo->prepare($query);
           $stmt->execute($inserts);
+
+          $query = sprintf('insert into isuumo.chair_feature (id, feature) values %s', implode(',', $featurePlaceHolders));
+          $stmt = $pdo->prepare($query);
+          $stmt->execute($featureParams);
+
           $pdo->commit();
         } catch (PDOException $e) {
             $pdo->rollBack();
@@ -393,11 +435,14 @@ return function (App $app) {
         try {
           $inserts = [];
           $placeHolders = [];
-
-
+          $featureParams = [];
+          $featurePlaceHolders = [];
             foreach ($records as $record) {
+              $id = (int)trim($record[0] ?? null);
+              $features = (string)trim($record[10] ?? null);
+
               $inserts = array_merge($inserts, [
-                (int)trim($record[0] ?? null), //id
+                $id, //id
                 trim($record[1] ?? null), //name
                 trim($record[2] ?? null), //description
                 trim($record[3] ?? null), //thumbnail
@@ -407,16 +452,33 @@ return function (App $app) {
                 (int)trim($record[7] ?? null), //rent
                 (int)trim($record[8] ?? null), //door_height
                 (int)trim($record[9] ?? null), //door_width
-                trim($record[10] ?? null), //features
+                $features, //features
                 (int)trim($record[11] ?? null), //popularity
               ]);
               $placeHolders[] = '(?,?,?,?,?,?,?,?,?,?,?,?)';
+              if($id && $features){
+                $featuresAry = explode(',', $features);
+                foreach($featuresAry as $feature){
+                  if($feature){
+                    $featureParams[] = $id;
+                    $featureParams[] = $feature;
+                    $featurePlaceHolders[] = '(?, ?)';
+                  }
+                }
+              }
             }
-          $query = 'INSERT INTO estate (id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES';
-          $query .= implode(',', $placeHolders);
+          $query = sprintf(
+            'INSERT INTO estate (id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES %s',
+            implode(',', $placeHolders)
+          );
           $pdo->beginTransaction();
           $stmt = $pdo->prepare($query);
           $stmt->execute($inserts);
+
+          $query = sprintf('insert into isuumo.estate_feature (id, feature) values %s', implode(',', $featurePlaceHolders));
+          $stmt = $pdo->prepare($query);
+          $stmt->execute($featureParams);
+
           $pdo->commit();
         } catch (PDOException $e) {
             $pdo->rollBack();
