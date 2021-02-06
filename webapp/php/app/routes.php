@@ -169,41 +169,72 @@ return function (App $app) {
             return $response->withStatus(StatusCodeInterface::STATUS_BAD_REQUEST);
         }
 
-        $searchQuery = 'SELECT * FROM chair WHERE ';
-        $countQuery = 'SELECT COUNT(*) FROM chair WHERE ';
-        $searchCondition = implode(' AND ', $conditions);
-        $limitOffset = ' ORDER BY minus_popularity ASC, id ASC LIMIT :limit OFFSET :offset';
+//        $searchQuery = 'SELECT * FROM chair WHERE ';
+//        $countQuery = 'SELECT COUNT(*) FROM chair WHERE ';
+//        $searchCondition = implode(' AND ', $conditions);
+//        $limitOffset = ' ORDER BY minus_popularity ASC, id ASC LIMIT :limit OFFSET :offset';
+//
+//        $stmt = $this->get(PDO::class)->prepare($countQuery . $searchCondition);
+//        foreach ($params as $key => $bind) {
+//            list($value, $type) = $bind;
+//            $stmt->bindValue($key, $value, $type);
+//        }
+//        $stmt->execute();
+//        $count = (int)$stmt->fetchColumn();
+//
+//        $params[':limit'] = [(int)$perPage, PDO::PARAM_INT];
+//        $params[':offset'] = [(int)$page*$perPage, PDO::PARAM_INT];
+//
+//        $stmt = $this->get(PDO::class)->prepare($searchQuery . $searchCondition . $limitOffset);
+//        foreach ($params as $key => $bind) {
+//            list($value, $type) = $bind;
+//            $stmt->bindValue($key, $value, $type);
+//        }
+//        $stmt->execute();
+//        $chairs = $stmt->fetchAll(PDO::FETCH_CLASS, Chair::class);
+//
+//        $response->getBody()->write(json_encode([
+//            'count' => $count,
+//            'chairs' => array_map(
+//                function(Chair $chair) {
+//                    return $chair->toArray();
+//                },
+//                $chairs
+//            ),
+//        ]));
 
-        $stmt = $this->get(PDO::class)->prepare($countQuery . $searchCondition);
-        foreach ($params as $key => $bind) {
-            list($value, $type) = $bind;
-            $stmt->bindValue($key, $value, $type);
+      $searchQuery = 'SELECT * FROM chair WHERE ';
+      $searchCondition = implode(' AND ', $conditions);
+      $sortCondition = ' ORDER BY minus_popularity ASC, id ASC';
+      $stmt = $this->get(PDO::class)->prepare($searchQuery . $searchCondition . $sortCondition);
+      foreach ($params as $key => $bind) {
+        list($value, $type) = $bind;
+        $stmt->bindValue($key, $value, $type);
+      }
+      $stmt->execute();
+      $chairs = $stmt->fetchAll(PDO::FETCH_CLASS, Chair::class);
+      $resChairs = [];
+      $iLimit = 0;
+      $iOffset = 1;
+      $limit = (int)$perPage;
+      $offset = (int)$page*$perPage;
+
+      foreach ($chairs as $chair){
+        if($iLimit <= $limit && $iOffset >= $offset){
+          $resChairs[] = $chair->toArray();
+          $iLimit++;
+          if($iLimit == $limit){
+            break;
+          }
         }
-        $stmt->execute();
-        $count = (int)$stmt->fetchColumn();
+        $iOffset++;
+      }
+      $response->getBody()->write(json_encode([
+        'count' => count($chairs),
+        'chairs' => $resChairs,
+      ]));
 
-        $params[':limit'] = [(int)$perPage, PDO::PARAM_INT];
-        $params[':offset'] = [(int)$page*$perPage, PDO::PARAM_INT];
-
-        $stmt = $this->get(PDO::class)->prepare($searchQuery . $searchCondition . $limitOffset);
-        foreach ($params as $key => $bind) {
-            list($value, $type) = $bind;
-            $stmt->bindValue($key, $value, $type);
-        }
-        $stmt->execute();
-        $chairs = $stmt->fetchAll(PDO::FETCH_CLASS, Chair::class);
-
-        $response->getBody()->write(json_encode([
-            'count' => $count,
-            'chairs' => array_map(
-                function(Chair $chair) {
-                    return $chair->toArray();
-                },
-                $chairs
-            ),
-        ]));
-
-        return $response->withHeader('Content-Type', 'application/json');
+      return $response->withHeader('Content-Type', 'application/json');
     });
 
     $app->get('/api/chair/low_priced', function(Request $request, Response $response) {
